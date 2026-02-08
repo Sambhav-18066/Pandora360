@@ -6,12 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Immersive VR English Tutor</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        canvas { display: block; }
+        body { margin: 0; font-family: 'Inter', sans-serif; background: #0f172a; overflow: hidden; }
+        /* Prevent A-Frame from hiding our React UI */
+        .a-canvas { z-index: 0 !important; }
+        .a-enter-vr { z-index: 100 !important; }
+        #root { position: relative; z-index: 10; width: 100vw; height: 100vh; }
     </style>
 <script type="importmap">
 {
@@ -21,14 +25,12 @@
     "react": "https://esm.sh/react@^19.2.4",
     "@google/genai": "https://esm.sh/@google/genai@^1.40.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "@react-three/fiber": "https://esm.sh/@react-three/fiber@^9.5.0",
-    "@react-three/drei": "https://esm.sh/@react-three/drei@^10.7.7",
     "three": "https://esm.sh/three@^0.182.0"
   }
 }
 </script>
 </head>
-<body class="bg-slate-900 text-slate-100 overflow-hidden">
+<body class="bg-slate-900 text-slate-100">
     <div id="root"></div>
 </body>
 </html>
