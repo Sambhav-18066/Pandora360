@@ -1,0 +1,8 @@
+{
+  "name": "Immersive VR English Tutor",
+  "description": "Generate photorealistic 360-degree environments and practice your spoken English in immersive VR-style scenes guided by an AI tutor.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
