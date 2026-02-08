@@ -18,7 +18,32 @@ const VoiceTutor: React.FC = () => {
   const sessionPromiseRef = useRef<Promise<any> | null>(null);
   const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
 
-  // Helper: Decode PCM bytes
+  // Refs to track transcription text to avoid stale closures in the Live API message handler
+  const inputRef = useRef('');
+  const outputRef = useRef('');
+
+  // Helper: Encode to base64 manually as per GenAI SDK guidelines
+  const encode = (bytes: Uint8Array) => {
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+  };
+
+  // Helper: Decode base64 manually as per GenAI SDK guidelines
+  const decode = (base64: string) => {
+    const binaryString = atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes;
+  };
+
+  // Helper: Decode PCM bytes as per GenAI SDK guidelines
   const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number) => {
     const dataInt16 = new Int16Array(data.buffer);
     const frameCount = dataInt16.length / numChannels;
@@ -54,8 +79,8 @@ const VoiceTutor: React.FC = () => {
             const int16 = new Int16Array(l);
             for (let i = 0; i < l; i++) int16[i] = inputData[i] * 32768;
             
-            const binary = Array.from(new Uint8Array(int16.buffer)).map(b => String.fromCharCode(b)).join('');
-            const base64 = btoa(binary);
+            // Correctly encode PCM data to base64
+            const base64 = encode(new Uint8Array(int16.buffer));
 
             sessionPromiseRef.current?.then(session => {
               session.sendRealtimeInput({ media: { data: base64, mimeType: 'audio/pcm;rate=16000' } });
@@ -69,9 +94,7 @@ const VoiceTutor: React.FC = () => {
           const base64Audio = msg.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
           if (base64Audio) {
             setIsSpeaking(true);
-            const binary = atob(base64Audio);
-            const bytes = new Uint8Array(binary.length);
-            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const bytes = decode(base64Audio);
             
             const ctx = outputAudioContextRef.current!;
             nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
@@ -90,17 +113,30 @@ const VoiceTutor: React.FC = () => {
 
           // Handle Transcriptions
           if (msg.serverContent?.inputTranscription) {
-            setCurrentInput(prev => prev + msg.serverContent.inputTranscription.text);
+            const text = msg.serverContent.inputTranscription.text;
+            inputRef.current += text;
+            setCurrentInput(prev => prev + text);
           }
           if (msg.serverContent?.outputTranscription) {
-            setCurrentOutput(prev => prev + msg.serverContent.outputTranscription.text);
+            const text = msg.serverContent.outputTranscription.text;
+            outputRef.current += text;
+            setCurrentOutput(prev => prev + text);
           }
           if (msg.serverContent?.turnComplete) {
-            setTranscriptions(prev => [
-              ...prev,
-              { text: currentInput, sender: 'user', timestamp: Date.now() },
-              { text: currentOutput, sender: 'tutor', timestamp: Date.now() }
-            ].slice(-10));
+            // Fix type error and handle stale closures by capturing current ref values
+            const finalInput = inputRef.current;
+            const finalOutput = outputRef.current;
+            
+            setTranscriptions(prev => {
+              const newItems: TranscriptionItem[] = [
+                { text: finalInput, sender: 'user', timestamp: Date.now() },
+                { text: finalOutput, sender: 'tutor', timestamp: Date.now() }
+              ];
+              return [...prev, ...newItems].slice(-10);
+            });
+            
+            inputRef.current = '';
+            outputRef.current = '';
             setCurrentInput('');
             setCurrentOutput('');
           }
@@ -132,7 +168,7 @@ const VoiceTutor: React.FC = () => {
   };
 
   return (
-    <div className="absolute bottom-6 right-6 z-50 flex flex-col items-end gap-4 w-full max-w-sm">
+    <div className="absolute bottom-6 right-6 z-50 flex flex-col items-end gap-4 w-full max-sm:max-w-xs max-w-sm">
       {/* Transcript window */}
       <div className="w-full bg-slate-900/80 backdrop-blur-xl border border-slate-700 rounded-2xl overflow-hidden shadow-2xl transition-all duration-300">
         <div className="p-3 bg-slate-800/50 flex items-center justify-between border-b border-slate-700">

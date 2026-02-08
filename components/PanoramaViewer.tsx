@@ -6,6 +6,7 @@ interface PanoramaViewerProps {
 }
 
 // Extend JSX namespace for A-Frame elements in TSX
+// We declare these in both global JSX and React.JSX namespaces to satisfy various TypeScript configurations (classic vs automatic JSX transform).
 declare global {
   namespace JSX {
     interface IntrinsicElements {
@@ -14,6 +15,17 @@ declare global {
       'a-assets': any;
       'a-entity': any;
       'a-camera': any;
+    }
+  }
+  namespace React {
+    namespace JSX {
+      interface IntrinsicElements {
+        'a-scene': any;
+        'a-sky': any;
+        'a-assets': any;
+        'a-entity': any;
+        'a-camera': any;
+      }
     }
   }
 }
